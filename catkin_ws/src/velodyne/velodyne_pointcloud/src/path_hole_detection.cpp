@@ -178,31 +178,86 @@ double no_frame=0,gremoval_time=0;
 //         }
 //     }
 
+
+
 //  row wise access
 
-for (size_t i = 0; i < cols; ++i) {
-        // Iterate over elements in the row
-        for (size_t j = 1; j < rows; ++j) {
-            // Calculate the difference between consecutive elements
-            float diff = std::abs(avg_arr[j][i]) - std::abs(avg_arr[j][i- 1]);
-            std::cout << "Difference between [" << i<<","<<j-1<< "] and [" << i<<","<<j << "] is: " << diff << endl;
-            logfile<<"Difference between [" << i<<","<<j-1<< "] and [" << i<<","<<j << "] is: " << diff << std::endl;
+// for (size_t i = 0; i < cols; ++i) {
+//         // Iterate over elements in the row
+//         for (size_t j = 1; j < rows; ++j) {
+//             // Calculate the difference between consecutive elements
+//             float diff = std::abs(avg_arr[j][i]) - std::abs(avg_arr[j][i- 1]);
+//             std::cout << "Difference between [" << i<<","<<j-1<< "] and [" << i<<","<<j << "] is: " << diff << endl;
+//             logfile<<"Difference between [" << i<<","<<j-1<< "] and [" << i<<","<<j << "] is: " << diff << std::endl;
+//             // Check if the difference is within the threshold
+//             if (std::abs(diff)>= thr1 && std::abs(diff) <= thr2) {
+//                 // Print the difference
+//                 std::cout<<"THRESHOLD ACHIEVED"<<endl;
+//                 // std::cout <<" Difference between [" << i <<","<<j-1<< "] and [" << i<<","<<j << "] is: " << diff << endl;
+//                 std::cout<<"achieved"<<endl;
+                
+//                 float y1=(i)*strip_size -y_strip;
+//                 float y2=(i+1)*strip_size -y_strip;
+//                 float j1c1=(j-1)*strip_size ;
+//                 float j1c2=(j)*strip_size;
+//                 float j2c2=(j+1)*strip_size;               
+//                 float x1=(j1c1+j1c2)/2;
+//                 float x2=(j1c2+j2c2)/2;
+//                 std::cout<<"x1: "<< x1 <<"x2: " << x2 <<" y1: "<<y1 <<"y2: "<<y2<<endl;
+//                 logfile<<"x1: "<< x1  <<"x2: " << x2 <<" y1: "<<y1 <<"y2: "<<y2<<std::endl;
+//                 // for Highlithing the cloud 
+//                 int r= 255;
+//                 int g=0;
+//                 int b=0;
+//                 std::cout<<"r: "<<r<<"g: "<<g<<" b: "<<b<<endl;
+
+//                 for (size_t k = 0; k < cloud_filtered.size(); ++k) {
+//                     // Get the point's x coordinate
+//                     float x = cloud_filtered.points[k].x;
+//                     float y= cloud_filtered.points[k].y;
+          
+//                      // Check if the x coordinate lies between x1 and x2
+//                     if (x >= x1 && x <= x2 && y>=y1 && y<=y2) {
+//                             cloud_filtered.points[k].r = r;
+//                             cloud_filtered.points[k].g = g;
+//                             cloud_filtered.points[k].b= b;
+                        
+//                     // Push the colored point to the colored point cloud    
+//                     }
+//                 }
+//             }
+
+//         }
+//     }
+//    4 neighbors technique :
+for(int i=1;i<rows-1;i++){
+    for(int j=1;j<cols-1;j++){
+        //finding the neighbors average 
+        float ne_avg = ( avg_arr[i][j-1] + avg_arr[i][j+1] + avg_arr[i-1][j] + avg_arr[i+1][j])/4.0;
+        float diff =std::abs(ne_avg)- std::abs(avg_arr[i][j]);
+        std::cout << "AVG of neighbors" << ne_avg<< endl;
+        logfile<<"Avg_diff neighbors: "<< ne_avg << std::endl;
+        std::cout << "Difference between [" << i<<","<<j<< "] and neighbors is: " << diff << endl;
+        logfile<<"Difference between [" << i<<","<<j<< "] and neighbors is: "<<diff<< std::endl;
             // Check if the difference is within the threshold
             if (std::abs(diff)>= thr1 && std::abs(diff) <= thr2) {
                 // Print the difference
                 std::cout<<"THRESHOLD ACHIEVED"<<endl;
                 // std::cout <<" Difference between [" << i <<","<<j-1<< "] and [" << i<<","<<j << "] is: " << diff << endl;
                 std::cout<<"achieved"<<endl;
-                
-                float y1=(i)*strip_size -y_strip;
-                float y2=(i+1)*strip_size -y_strip;
-                float j1c1=(j-1)*strip_size ;
-                float j1c2=(j)*strip_size;
-                float j2c2=(j+1)*strip_size;               
-                float x1=(j1c1+j1c2)/2;
-                float x2=(j1c2+j2c2)/2;
-                std::cout<<"x1: "<< x1 <<"x2: " << x2 <<" y1: "<<y1 <<"y2: "<<y2<<endl;
-                logfile<<"x1: "<< x1  <<"x2: " << x2 <<" y1: "<<y1 <<"y2: "<<y2<<std::endl;
+            
+                float x1=((i)*strip_size + (i-1)* strip_size)/2.0;
+
+                float x2=((i+1)*strip_size + (i+2)* strip_size)/2.0;
+
+                float j1c1=(j-1)*strip_size - y_strip;
+                float j1c2=(j)*strip_size - y_strip;
+                float j2c1=(j+1)*strip_size - y_strip ;   
+                float j2c2=(j+2)*strip_size - y_strip ;             
+                float y1=(j1c1+j1c2)/2.0;
+                float y2=(j2c2+j2c2)/2.0;
+                std::cout<<"x1: "<< (i)*strip_size <<"x2: " << x2 <<" y1: "<<y1 <<"y2: "<<y2<<endl;
+                logfile<<"x1: "<< (i)*strip_size <<"x2: " << x2 <<" y1: "<<y1 <<"y2: "<<y2<<std::endl;
                 // for Highlithing the cloud 
                 int r= 255;
                 int g=0;
@@ -224,9 +279,8 @@ for (size_t i = 0; i < cols; ++i) {
                     }
                 }
             }
-
-        }
     }
+}
     // for (int i = 0; i < rows; ++i) {
     //     for (int j = 0; j < cols; ++j) {
     //         std::cout << "Element (" << i << ", " << j << "): ";
@@ -243,6 +297,7 @@ sensor_msgs::PointCloud2 output_msg;
 pcl::toROSMsg(cloud_filtered, output_msg);
 output_msg.header = msg->header;
     // Publish the filtered point cloud
+
 pub_.publish(output_msg);
 
     std::clock_t end = std::clock();
@@ -278,7 +333,7 @@ int main(int argc, char **argv)
   std::cout<<"Hai"<<endl;
   ros::Subscriber sub_ = nh_ground_removal_new.subscribe("/velodyne_points", 1, callback);
   
-  logfile.open("/home/lidar/Desktop/vishnu/log_file_path_hole_0.35_0.90thr2.txt");
+  logfile.open("/home/lidar/Desktop/vishnu/log_file_path_hole_0.35_0.90thr2_neighbor.txt");
     if (!logfile.is_open()) {
         ROS_ERROR("Failed to open log file");
         return 1;
