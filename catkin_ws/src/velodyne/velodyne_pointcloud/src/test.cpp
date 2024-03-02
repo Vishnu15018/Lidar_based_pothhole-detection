@@ -50,10 +50,11 @@ ros::Publisher pub_;
 // typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 using namespace std;
 std::ofstream logfile;
-const int size_array = 11;
+const int size_array = 15;
 float thr1 =0.090;
 float thr2=0.20;
 float strip_size=1;
+float y_strip=0.7;
  
 double no_frame=0,gremoval_time=0;
   void callback(const sensor_msgs::PointCloud2::ConstPtr& msg)
@@ -101,25 +102,25 @@ double no_frame=0,gremoval_time=0;
 
 //  std::cout << "Received point cloud with " << cloud->size() << " points." << std::endl;
 // ////////////////////////////////////////////////////////
-float xmax,xmin,ymax,ymin;
-for (size_t i = 0; i < cloud->points.size (); ++i)
-   {
+// float xmax,xmin,ymax,ymin;
+// for (size_t i = 0; i < cloud->points.size (); ++i)
+//    {
 	
-	if (i==0){
-		xmax=cloud->points[i].x;
-		xmin=cloud->points[i].x;
-		ymax=cloud->points[i].y;
-		ymin=cloud->points[i].y;
-		}
-	else {if (xmax<=cloud->points[i].x)
-		xmax=cloud->points[i].x;
-	     if (xmin>=cloud->points[i].x)
-		xmin=cloud->points[i].x;
-      if (ymax<=cloud->points[i].y)
-		ymax=cloud->points[i].y;
-	     if (ymin>=cloud->points[i].y)
-		ymin=cloud->points[i].y;}
-      }
+// 	if (i==0){
+// 		xmax=cloud->points[i].x;
+// 		xmin=cloud->points[i].x;
+// 		ymax=cloud->points[i].y;
+// 		ymin=cloud->points[i].y;
+// 		}
+// 	else {if (xmax<=cloud->points[i].x)
+// 		xmax=cloud->points[i].x;
+// 	     if (xmin>=cloud->points[i].x)
+// 		xmin=cloud->points[i].x;
+//       if (ymax<=cloud->points[i].y)
+// 		ymax=cloud->points[i].y;
+// 	     if (ymin>=cloud->points[i].y)
+// 		ymin=cloud->points[i].y;}
+//       }
 
 // std::cout<<"range of x valoues "<<xmin<<" to" <<xmax<<std::endl;
 // std::cout<<"range of y valoues"<<ymin<<" to "<<ymax<<std::endl;
@@ -145,7 +146,7 @@ for (size_t i = 0; i < cloud->points.size (); ++i)
 // }
 
  for (int i=0 ; i < cloud->points.size ();++i){
-    if (cloud->points[i].x>0 && (cloud->points[i].y >=-0.7 && cloud->points[i].y <=0.7) && cloud->points[i].z <= -1.10){
+    if (cloud->points[i].x>0 && (cloud->points[i].y >=-y_strip && cloud->points[i].y <= y_strip) && cloud->points[i].z <= -1.10){
             int index= static_cast<int>((cloud->points[i].x)/strip_size) ;
             // std::cout<<"x: "<<cloud->points[i].x<<endl;
             // std::cout<<index<<endl;
@@ -177,25 +178,45 @@ for (int i = 0; i < size_array; ++i) {
 //      std::cout<<avg_z[i]<<" ";
 // }
 std::cout<<endl;
-// std::vector<float,11> diff;
-//  if (point_old.x>0 && (point_old.y >=-1 && point_old.y <=1) )
+
 //creating a pointcloud with rgb info
-for (auto& point_old : cloud->points)
+
+
+
+
+    for (auto& point_old : cloud->points)
 
     {  
-      pcl::PointXYZRGB point;
-         point.x=point_old.x;
-         point.y=point_old.y;
-         point.z=point_old.z;
-         point.r=255;
-         point.g=255;
-         point.b=255;
-         cloud_filtered.push_back(point);
+    //   pcl::PointXYZRGB point;
+    //      point.x=point_old.x;
+    //      point.y=point_old.y;
+    //      point.z=point_old.z;
+    //      point.r=255;
+    //      point.g=255;
+    //      point.b=255;
+    //      cloud_filtered.push_back(point);
+            pcl::PointXYZRGB pcl_point;
+            pcl_point.x = point_old.x;
+            pcl_point.y = point_old.y;
+            pcl_point.z = point_old.z;
+        if (point_old.x >=0  and point_old.x < size_array && point_old.y >= -y_strip && point_old.y <= y_strip && point_old.z<-1.10) {
+
+            pcl_point.r = 0;
+            pcl_point.g = 255;
+            pcl_point.b = 0;
+            
+        }
+        else{
+            pcl_point.r = 255;
+            pcl_point.g = 255;
+            pcl_point.b = 255;
+        }
+        cloud_filtered.push_back(pcl_point);
     
         
     }
 float n=0,n1=0,n2=0;
-for(int i=6;i<size_array -3;++i){
+for(int i=6;i<size_array;++i){
    
    std::cout<<"average diff: "<<avg_z[i] - avg_z[i+1]<< "for "<<i<<" to "<<i+1<<endl;
    logfile << "average diff b/w: "<<i<< "to "<<i+1<<"is"<<avg_z[i] - avg_z[i+1]<<std::endl;
