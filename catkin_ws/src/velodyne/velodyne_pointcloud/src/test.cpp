@@ -1,7 +1,4 @@
-// IMprovements :
-//  Increase the stripsize 
-// publish the distances
-//  some false positives are coming if we take more strips, and after the speed , more false popsitives are coming
+//  This is for speed bump detection.
 
 
 #include <iostream>
