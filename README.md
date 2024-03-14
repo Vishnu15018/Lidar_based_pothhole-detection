@@ -45,7 +45,7 @@ Code for the pathole detection is in **catkin_ws/src/velodyne/velodyne_pointclou
 ## results
 
 1. results of pathhole detection algorithm.
-<!  ![Result Image 1](results/paper_5_d2_25.49_cropped.png)
+<!  ![Result Image 1](results/github_upload.png)
 *Image reference and point cloud with speed bump highlighted * >
 
      
