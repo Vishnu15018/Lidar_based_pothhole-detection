@@ -88,6 +88,7 @@ double no_frame=0,gremoval_time=0;
 
     std::cout<<"vector is created:"<<endl;
     // Loop through point cloud data
+
     for (const auto& point : cloud->points) {
         // Apply constraints
         if (point.x >= 0 && point.x <x_strip && point.y > -y_strip && point.y < y_strip && point.z<-1.1) {
@@ -104,6 +105,7 @@ double no_frame=0,gremoval_time=0;
             array2D[row][col].push_back(point.z);
         }
     }
+
 // for finding the average in the grid
  std::vector<std::vector<float>> avg_arr(rows,std::vector<float>(cols));
   for(int i=0;i<rows;i++){
@@ -153,6 +155,8 @@ double no_frame=0,gremoval_time=0;
         
     }
     std::vector<std::vector<float>> res;
+
+
   //finding the differences 
 //    for (size_t i = 0; i < rows; ++i) {
 //         // Iterate over elements in the row
@@ -271,6 +275,7 @@ double no_frame=0,gremoval_time=0;
 //             }
 //         }
 //     }
+
 
 //    4 neighbors technique :
 // std::vector int1;
@@ -397,7 +402,7 @@ int main(int argc, char **argv)
         ROS_ERROR("Failed to open log file");
         return 1;
     }
-  pub_ = nh_ground_removal_new.advertise<sensor_msgs::PointCloud2> ("/test_topic", 1);
+  pub_ = nh_ground_removal_new.advertise<sensor_msgs::PointCloud2> ("/test_topic_zavg", 1);
   //pub_ = nh_ground_removal_new.advertise<PointCloud>("/published_topic", 1);
 
   ros::spin();

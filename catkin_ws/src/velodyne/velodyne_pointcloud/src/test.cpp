@@ -1,3 +1,9 @@
+// IMprovements :
+//  Increase the stripsize 
+// publish the distances
+//  some false positives are coming if we take more strips, and after the speed , more false popsitives are coming
+
+
 #include <iostream>
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
@@ -36,7 +42,7 @@
 #include <pcl/point_types.h>
 #include <pcl/filters/voxel_grid.h>
 #include <ros/ros.h>
-
+#include <std_msgs/Float32.h>
 #include <velodyne_pointcloud/organized_cloudXYZIR.h>
 #include <velodyne_pointcloud/pointcloudXYZIR.h>
 #include <velodyne_pointcloud/point_types.h>
@@ -45,39 +51,58 @@
 int count=1;
 ros::Publisher pub_;
 //static double distance;
-
+ros::Publisher distance_pub;
 
 // typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 using namespace std;
 std::ofstream logfile;
-const int size_array = 15;
-float thr1 =0.090;
-float thr2=0.20;
-float strip_size=1;
-float y_strip=0.7;
- 
-double no_frame=0,gremoval_time=0;
+
+// array size for storing strip coordinates 
+
+
+
+
+//  Actual Thresholds for speed bump
+float thr1 = 0.0700;
+float thr2 = 0.20;
+
+// strip_size
+float strip_size=1.0;  
+        std::ofstream outputFile; 
+ // field of vie for analyzing the speed bump 
+float y_strip=1.0;   
+float x_strip =12.0;
+const int size_array = ceil(x_strip/strip_size);     // we can use floor((x_strip/strip_size)+1)
+//  this tells which strips we are analyzing in the direction of x
+float buffer_end =0;                  // size_array - bufferend 
+float buffer_start = 0;
+
+
+//  to highlight the speed bump , y coorinates
+      float y_strip1 = -4.2;
+      float y_strip2 = 3;
+
+
+//  ground height 
+
+  float ground_height = -1.48;
+  double no_frame=0,gremoval_time=0;
+
+
+
+
   void callback(const sensor_msgs::PointCloud2::ConstPtr& msg)
   {     std::clock_t start = std::clock();
     // Stop the clock
 
-    std::array<std::vector<float>, size_array> z_values;
+    std::vector<std::vector<float>> z_values(size_array);
 // std::array<std::vector<float>, size_array> z_values;
-    std::vector<float> avg_z(size_array);
+    std::vector<float> avg_z(size_array,0);
 
     pcl::PointCloud<pcl::PointXYZRGB> cloud_filtered;
-    // pcl::PointCloud<pcl::PointXYZRGB> cloud_filtered;
-    //   //Sensor msgs to pointcloud2 pointer
-    //  // pcl::PointCloud<pcl::PointXYZI> cloud1;
+
     pcl::PointCloud<velodyne_pointcloud::PointXYZIR> cloud1;
     pcl::fromROSMsg (*msg, cloud1);
-  
-  
-  
-  
-
-
-
 
   pcl::PointCloud<velodyne_pointcloud::PointXYZIR>::Ptr cloud (new pcl::PointCloud<velodyne_pointcloud::PointXYZIR>);
   
@@ -98,68 +123,52 @@ double no_frame=0,gremoval_time=0;
    std::cout<<begin<<std::endl;
 
    pcl::PointIndices::Ptr inliers(new pcl::PointIndices());
-// int count_groud=0;
 
-//  std::cout << "Received point cloud with " << cloud->size() << " points." << std::endl;
-// ////////////////////////////////////////////////////////
-// float xmax,xmin,ymax,ymin;
-// for (size_t i = 0; i < cloud->points.size (); ++i)
-//    {
-	
-// 	if (i==0){
-// 		xmax=cloud->points[i].x;
-// 		xmin=cloud->points[i].x;
-// 		ymax=cloud->points[i].y;
-// 		ymin=cloud->points[i].y;
-// 		}
-// 	else {if (xmax<=cloud->points[i].x)
-// 		xmax=cloud->points[i].x;
-// 	     if (xmin>=cloud->points[i].x)
-// 		xmin=cloud->points[i].x;
-//       if (ymax<=cloud->points[i].y)
-// 		ymax=cloud->points[i].y;
-// 	     if (ymin>=cloud->points[i].y)
-// 		ymin=cloud->points[i].y;}
-//       }
 
-// std::cout<<"range of x valoues "<<xmin<<" to" <<xmax<<std::endl;
-// std::cout<<"range of y valoues"<<ymin<<" to "<<ymax<<std::endl;
+// float z_bin=0.1;
+// float max_z=-2.0;
+// float min_z=-1.1;
+// const int No_bins = abs(max_z - min_z) / z_bin;
+// std::vector<int> z_bin_count(No_bins,0);
 
-//   pcl::PointCloud<velodyne_pointcloud::PointXYZIR> cloud_filtered ;
-// for (int i=0 ;i< cloud->points.size (); ++i){
-//     if ((cloud->points[i].y >=-2 && cloud->points[i].y <=2)) {
-//         if (cloud->points[i].x >=0 && cloud->points[i].x<=2){
-//           z_values[0].push_back(cloud->points[i].z);
-//         }
-//         else if (cloud->points[i].x >=3 && cloud->points[i].x<=5) {
-//             z_values[1].push_back(cloud->points[i].z);
-//         } else if (cloud->points[i].x >=6&& cloud->points[i].x<=8) {
-//             z_values[2].push_back(cloud->points[i].z);
-//         } else if (cloud->points[i].x >=9 && cloud->points[i].x<=11) {
-//             z_values[3].push_back(cloud->points[i].z);
-//         } else {
-//             continue; // Skip points that do not fall within any range
-//         }
-//         // std::cout<<cloud->points[i].x<<"y"<<cloud->points[i].y<<"z"<<cloud->points[i].z<<endl;
-        
-//     }
-// }
 
- for (int i=0 ; i < cloud->points.size ();++i){
-    if (cloud->points[i].x>0 && (cloud->points[i].y >=-y_strip && cloud->points[i].y <= y_strip) && cloud->points[i].z <= -1.10){
+
+float min=0;
+for (int i=0 ; i < cloud->points.size ();++i){
+    if(cloud->points[i].z<=min){
+      min=cloud->points[i].z;
+    }
+    if (cloud->points[i].x>0 && (cloud->points[i].y >=-y_strip && cloud->points[i].y <= y_strip) && cloud->points[i].z <= -1.10 && cloud->points[i].z>=-2.00){
             int index= static_cast<int>((cloud->points[i].x)/strip_size) ;
             // std::cout<<"x: "<<cloud->points[i].x<<endl;
             // std::cout<<index<<endl;
-           if (index>=0 and index<size_array*strip_size){
-                z_values[index].push_back(cloud->points[i].z);
-        // cloud_filtered.push_back(cloud->points[i]);     
+
+            // z_bin
+            // int bin_index=0;
+
+            // float z=cloud->points[i].z;
+            // if(z>=max_z && z<=min_z){
+            //     bin_index=static_cast<int>(((abs(z)-abs(min_z))/z_bin));
+            // }
+            // z_bin_count[bin_index] = z_bin_count[bin_index]+1;
+            // std::cout<<"Bin_Index: "<<bin_index<<std::endl;
+
+
+           if (index>=0 and index<size_array){
+                z_values[index].push_back(cloud->points[i].z);    
     }
     }
  }
 
 
+
+
 ros::Time timestamp = msg->header.stamp;
+
 logfile << " frame: " << no_frame << std::endl;
+std::cout<< " frame: " << no_frame << std::endl;
+logfile <<"Average_zvalues"<<std::endl;
+
 
 
 for (int i = 0; i < size_array; ++i) {
@@ -167,39 +176,33 @@ for (int i = 0; i < size_array; ++i) {
         for (const auto& z : z_values[i]) {
             sum +=z;
         }
-        float average = z_values[i].empty() ? 0.0 : sum / z_values[i].size();
+        float average = z_values[i].empty() ? ground_height: sum / z_values[i].size();
         avg_z[i]=average;
         // ROS_INFO_STREAM("Average z value for points with x in range " << (i) << " to " << (i +1) << ": " << average);
-        logfile << timestamp << "Average z value for points with x in range " << i << " to " << i+1 << ": " << average << std::endl;
-        
+        // logfile << timestamp << "Average z value for points with x in range " << i << " to " << i+1 << ": " << average << std::endl;
+        logfile<<average<<std::endl; 
+        std::cout<<"index: "<<i<<"is"<<average<<std::endl;  
     }
+
+    
+logfile<<"Average_values end"<<std::endl;
+
 
 // for(int i=0;i<size_array;++i){
 //      std::cout<<avg_z[i]<<" ";
 // }
+
 std::cout<<endl;
-
 //creating a pointcloud with rgb info
-
-
-
-
     for (auto& point_old : cloud->points)
 
     {  
-    //   pcl::PointXYZRGB point;
-    //      point.x=point_old.x;
-    //      point.y=point_old.y;
-    //      point.z=point_old.z;
-    //      point.r=255;
-    //      point.g=255;
-    //      point.b=255;
-    //      cloud_filtered.push_back(point);
+
             pcl::PointXYZRGB pcl_point;
             pcl_point.x = point_old.x;
             pcl_point.y = point_old.y;
             pcl_point.z = point_old.z;
-        if (point_old.x >=0  and point_old.x < size_array && point_old.y >= -y_strip && point_old.y <= y_strip && point_old.z<-1.10) {
+        if (point_old.x >=0  and point_old.x < x_strip && point_old.y >= -y_strip && point_old.y <= y_strip && point_old.z<-1.10) {
 
             pcl_point.r = 0;
             pcl_point.g = 255;
@@ -215,14 +218,28 @@ std::cout<<endl;
     
         
     }
+
+
 float n=0,n1=0,n2=0;
-for(int i=6;i<size_array;++i){
-   
+std::vector<float>avg_diff(size_array-1,0.0f);
+logfile<<"avg_diff_start"<<std::endl;
+// avg_z[size_array+1]=10;
+std::cout<<"avg[size_array]"<<avg_z[size_array+1]<<endl;
+for(int i=buffer_start;i<size_array-buffer_end -1 ;++i){
+    float distance =-1;
    std::cout<<"average diff: "<<avg_z[i] - avg_z[i+1]<< "for "<<i<<" to "<<i+1<<endl;
-   logfile << "average diff b/w: "<<i<< "to "<<i+1<<"is"<<avg_z[i] - avg_z[i+1]<<std::endl;
+  //  logfile << "average diff b/w: "<<i<< "to "<<i+1<<"is"<<avg_z[i] - avg_z[i+1]<<std::endl;
+  //  logfile<<"index: "<<i<<std::endl;
+   logfile<<avg_z[i] - avg_z[i+1]<<endl;
+   avg_diff.push_back(avg_z[i] - avg_z[i+1]);
    if( (std::abs(avg_z[i] - avg_z[i+1]) >= thr1 ) && (std::abs(avg_z[i] - avg_z[i+1]) < thr2)){
+         
+         distance=i+1;
+         std_msgs::Float32 distance_msg;
+         distance_msg.data = distance;
+         distance_pub.publish(distance_msg);
       std::cout<<"Index : "<< i <<endl;
-      logfile << "Index: Threshold statisfies"<<i<<std::endl;
+      // logfile << "Index: Threshold statisfies"<<i<<std::endl;
       n=strip_size*i;
       n1=strip_size*(i+1);
       n2=strip_size*(i+2);
@@ -236,27 +253,33 @@ for(int i=6;i<size_array;++i){
 
       for (size_t j = 0; j < cloud_filtered.size(); ++j) {
           // Get the point's x coordinate
-          float x = cloud_filtered.points[j].x;
-          
-          // Check if the x coordinate lies between x1 and x2
-          if (x >= x1 && x <= x2) {
-              // Create a new point with XYZ coordinates
-              // Set color of the point to red (255, 0, 0)
-              // point.rgb = ((uint32_t)r << 16 | (uint32_t)g << 8 | (uint32_t)b);
-              
-              cloud_filtered.points[j].r = r;
-              cloud_filtered.points[j].g = g;
-              cloud_filtered.points[j].b= b;
-
-              // Push the colored point to the colored point cloud    
-          }
+          if (cloud_filtered.points[j].x>0 && cloud_filtered.points[j].y> y_strip1 && cloud_filtered.points[j].y< y_strip2 && cloud_filtered.points[j].z <= -1.10){
+            float x = cloud_filtered.points[j].x;
+            
+            // Check if the x coordinate lies between x1 and x2
+            if (x >= x1 && x <= x2) {
+                // Create a new point with XYZ coordinates
+                // Set color of the point to red (255, 0, 0)
+                // point.rgb = ((uint32_t)r << 16 | (uint32_t)g << 8 | (uint32_t)b);
+                cloud_filtered.points[j].r = r;
+                cloud_filtered.points[j].g = g;
+                cloud_filtered.points[j].b= b;
+                // Push the colored point to the colored point cloud    
+            }
+           
+            }
          }
-
-
 }
 }
 
-no_frame++;
+
+
+logfile<<"end_average_distances"<<endl;
+
+
+
+
+
 //   std::cout<<"average ground removal time: "<< (gremoval_time/no_frame)<<std::endl;
 // std::cout << "Total no of frames: "<<no_frame<<std::endl;
 
@@ -274,163 +297,14 @@ pub_.publish(output_msg);
     // Output the elapsed time
     std::cout << "Execution time: " << elapsed_time << " seconds" << std::endl;
 
+// Open file in append mode
+    outputFile << no_frame<< "," << elapsed_time *1000 << std::endl;
+   
+    no_frame++;
+
+
   }
-
-
-
-
-
-
-// float xminround=ceilf(xmin-1);
-// float xmaxround=ceilf(xmax+1);
-// float yminround=ceilf(ymin-1);
-// float ymaxround=ceilf(ymax+1);
-//  int xbin,ybin;
-// float d=0.5;
-// xbin=(xmaxround-xminround)/d;
-// ybin=(ymaxround-yminround)/d;
-//  std::cout<<xbin<<"   "<<ybin<<std::endl;
-// static std::vector<int> vect[1000][1200];
-
-// for (size_t i = 0; i < cloud->points.size (); ++i)
-// {
-//   int dx,dy;
-//  pcl::PointXYZ pt(cloud->points[i].x, cloud->points[i].y, cloud->points[i].z);
-//  dx=(pt.x-xmin)/d;
-//  dy=(pt.y-ymin)/d;
-//  //std::cout<<dx<<"   "<<dy<<std::endl;
-//  vect[dx][dy].push_back(i);
-// }
-// float zmin[xbin+1][ybin+1];
-// float zmax[xbin+1][ybin+1];
-// float zavg[xbin+1][ybin+1];
-// for (int i=1;i<=xbin;++i)
-// for (int j=1;j<=ybin;++j)
-// {
-// zavg[i][j]=0;
-// int count=0;
-// for (int k=0;k<vect[i][j].size();++k)
-// {
-// zavg[i][j]=zavg[i][j]+cloud->points[vect[i][j][k]].z;
-// if (count ==0){
-// zmin[i][j]=cloud->points[vect[i][j][k]].z;ros::Time begin= ros::Time::now();
-// //std::cout<<begin<<std::endl;
-// zmax[i][j]=cloud->points[vect[i][j][k]].z;count=count+1;}
-// else {if (zmin[i][j] >= cloud->points[vect[i][j][k]].z)
-//       zmin[i][j]=cloud->points[vect[i][j][k]].z;
-//       if (zmax[i][j] <= cloud->points[vect[i][j][k]].z)
-//       zmax[i][j]=cloud->points[vect[i][j][k]].z;}
-
-// }
-// zavg[i][j]=zavg[i][j]/vect[i][j].size();
-// //std::cout<<"avg z for"<<i<<"and"<<j<<"is equal to"<<zavg[i][j]<<"     ";
-// }
-// float th1=0.2;	
-// float th2=0.3;
-// float th3=0.1;
-// float ground_threshold=0.1; //oringinal 0.1
-// float f=5;	
-// int count_ground=0; 
-
-
-// for (int i=1;i<=xbin;++i)
-// 	for (int j=1;j<=ybin;++j)
-// 	{
-// 	if ((zmin[i][j]<th1) && (zmax[i][j]-zmin[i][j]>th2))
-// 	{
-// 		for (int k=0;k<vect[i][j].size();++k)
-// 		{
-
-// 			if ( (cloud->points[vect[i][j][k]].z <zmin[i][j]+ground_threshold))
-//      			{
-//       			//inliers->indices.push_back(vect[i][j][k]);
-//       			count_groud++;
-      			
-//      			}
-//      			else{
-//      			   cloud_filtered.push_back(cloud->points[vect[i][j][k]]);
-//      			}
-// 		}
-// 	}	
-	
-	
-// 	else if((zmin[i][j]<th1) && (th3<zmax[i][j]-zmin[i][j]) &&(zmax[i][j]-zmin[i][j]>th2))
-// 	{
-// 		for (int k=0;k<vect[i][j].size();++k)
-// 		{
-
-// 		if  (cloud->points[vect[i][j][k]].z < (zmin[i][j]+(zmax[i][j]-zmin[i][j])/f))
-//      		{
-//       			//inliers->indices.push_back(vect[i][j][k]);
-//       			count_groud++;
-//      		}
-//      		else{
-     		
-//      		cloud_filtered.push_back(cloud->points[vect[i][j][k]]);
-//      		}
-     			
-// 		}
-// 	}
-// 	else if((zmin[i][j]<th1) && (th3>zmax[i][j]-zmin[i][j]))
-// 	{
-// 		for (int k=0;k<vect[i][j].size();++k)
-// 		{
-
-//       			//inliers->indices.push_back(vect[i][j][k]);
-//       			count_groud++;  
-// 		}
-// 	}
-
-// //Putting Non-ground points
-// else{
-//       for (int k=0;k<vect[i][j].size();++k){      
-//       		cloud_filtered.push_back(cloud->points[vect[i][j][k]]);
-      	
-//       	}
-//     }
-
-// }
-
-
-//   ros::Time time_at_end= ros::Time::now();
-//   std::cout<<time_at_end<<std::endl;
-//   std::cout<<"time for ground removal "<<time_at_end-begin<<std::endl;
-//   gremoval_time+=(time_at_end-begin).toSec();
-
-
-// //------------------------------------------------------------------------------------------
  
-   
-   
-  
-  
-//   //pcl::fromPCLPointCloud2(cloud_filtered, cloud_msgs);
-  
-//   pcl::PCLPointCloud2 pcl_pc2;
-//   pcl::toPCLPointCloud2(cloud_filtered,pcl_pc2);
-  
-  
-  
-//   sensor_msgs::PointCloud2 rosCloud;
-//   pcl_conversions::fromPCL(pcl_pc2,rosCloud);
-//  //  rosCloud.header.frame_id="velodyne";
-   
-//   rosCloud.header.stamp = msg->header.stamp;
-//     rosCloud.header.frame_id="velodyne";
-//     rosCloud.header.stamp=ros::Time::now();
-//   pub_.publish(rosCloud);
-  
-  
-//   for (int i=1;i<=xbin;++i)
-//   for (int j=1;j<=ybin;++j)
-//    {
-//     vect[i][j].clear();
-//    }
-//   std::cout<<"vector cleared"<<std::endl;
-  
-//   }
-  
-  
 int main(int argc, char **argv)
 {
   //Initiate ROS
@@ -441,17 +315,28 @@ int main(int argc, char **argv)
   // std::cout<<"Value of distance "<<distance<<"\n";
   //n.getParam("/main/x1",x1);
   ros::Subscriber sub_ = nh_ground_removal_new.subscribe("/velodyne_points", 1, callback);
+  distance_pub = nh_ground_removal_new.advertise<std_msgs::Float32>("/distance_to_speed_bump", 1);
   
   logfile.open("/home/lidar/Desktop/vishnu/log_file_test1.txt");
     if (!logfile.is_open()) {
         ROS_ERROR("Failed to open log file");
         return 1;
     }
-  pub_ = nh_ground_removal_new.advertise<sensor_msgs::PointCloud2> ("/test_topic", 1);
+  outputFile.open("/home/lidar/Desktop/vishnu/frame_time.csv");
+  if (!outputFile.is_open()){
+        ROS_ERROR("Failed to open frame_time_csv file");
+        return 1;
+  }
+  outputFile << "frame,time" << std::endl;
+
+
+  pub_ = nh_ground_removal_new.advertise<sensor_msgs::PointCloud2> ("/speed_bump", 1);
   //pub_ = nh_ground_removal_new.advertise<PointCloud>("/published_topic", 1);
 
   ros::spin();
    logfile.close();
+   outputFile.close();
+
   return 0;
 }
 
